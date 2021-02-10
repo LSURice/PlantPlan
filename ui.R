@@ -17,7 +17,7 @@ fluidPage(
                    multiple = FALSE,
                    accept = c(".xlsx")),
 	    numericInput(label="Number of Tiers", inputId="nRows", value=NULL, min=1),
-	    numericInput(label="Number of Passes", inputId="nCols", value=NULL, min=1),
+	    numericInput(label="Number of Passes", inputId="nCols", value=NULL, min=1),S
 	    checkboxGroupInput(label="Borders", inputId="border",
 	                       inline=T, choices=c("Left", "Right")),
 	    selectInput(label="Layout Type", inputId="layout",

@@ -31,6 +31,10 @@ get_pageNumber <- function(brapi_call, token){
   return(pages)
 }
 
+get_seasons_named_list <- function(con, token){
+	
+}
+
 
 get_study_named_list <- function(con, token){
   # Retrieve a df with all studies using brapi
@@ -317,7 +321,7 @@ get_plant_plan <- function(layout_info, border, metadata){
                        "accession", "replicate", "blockNumber", "X","Y")]
   sorted_df <- df[order(as.numeric(df$X), as.numeric(df$Y)),]
   colnames(sorted_df) <- c("plot_name", "plot_number", "study_name",
-                            "location", "accession", "rep", "block", "tier", "pass")
+                            "location", "accession", "rep", "block", "pass", "tier")
   sorted_df$tier <- as.numeric(sorted_df$tier)
   sorted_df$pass <- as.numeric(sorted_df$pass)
   
