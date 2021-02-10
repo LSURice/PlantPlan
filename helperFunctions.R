@@ -5,6 +5,7 @@ library(ggplot2)
 
 ####  BrAPI functions ####
 
+
 get_token <- function(user, passwd, con){
   brapi_call <- paste0(con, "/brapi/v2/token?username=",
                        user, "&password=", passwd)
@@ -13,6 +14,7 @@ get_token <- function(user, passwd, con){
   token <- jsonlite::fromJSON(txt=cont)$access_token
   return(token)
 }
+
 
 get_brapi_json <- function(brapi_call, token){
   # Get a json object for brapi call
@@ -31,14 +33,30 @@ get_pageNumber <- function(brapi_call, token){
   return(pages)
 }
 
+
 get_seasons_named_list <- function(con, token){
-	
+  # Retrieve available sesason (years)
+  call <- paste0(con, "/brapi/v2/seasons?pageSize=1000")
+  pages <- get_pageNumber(call, token)
+  seasonData <- data.frame()
+  for(i in 0:pages){
+  	contList <- get_brapi_json(paste0(call,"&page=",i), token)
+  	year <- contList[["result"]][["data"]][["year"]]
+  	seasonDbId <- contList[["result"]][["data"]][["seasonDbId"]]
+  	seasonData <- rbind(seasonData, data.frame(year=year,
+  	                                           seasonDbId=seasonDbId,
+  	                                           stringsAsFactors=F))
+  }
+ seasonData < seasonData[order(seasonData$year),]
+ seasonDict <- seasonData$seasonDbId
+ names(seasonDict) <- seasonData$year
+ return(seasonDict)
 }
 
 
-get_study_named_list <- function(con, token){
+get_study_named_list <- function(con, token, seasonDbId){
   # Retrieve a df with all studies using brapi
-  call <- paste0(con,"/brapi/v2/studies?pageSize=1000")  # Get page number
+  call <- paste0(con,"/brapi/v2/studies?pageSize=1000&seasonDbId=",seasonDbId)  # Get page number
   pages <- get_pageNumber(call, token)
   trialData <- data.frame()
   for(i in 0:pages){  # Collect results from each page
@@ -83,12 +101,6 @@ get_layout_info <- function(con, studyDbId, token){
   layout$studyName <- rep(studyName, nrow(layout))
   layout$locationName <- rep(locationName, nrow(layout))
   return(layout)
-}
-
-
-update_to_database <- function(con, layout_info){
-	# Update layout in database
-	                 
 }
 
 
@@ -151,6 +163,7 @@ is_valid_design <- function(nRow, nCol, layout_info, design_type){
   }
 }
 
+
 read_metadata <- function(metadata){
   # Make sure the required columns are  present in the spreadsheet
   cols <- c("Entry", "Name", "HT", "Grain_Class", "Grain_Type")
@@ -201,6 +214,7 @@ get_combine_order <- function(dim1_len, dim2_len, nPlots, flip){
 	}
   }
 }
+
 
 make_serpentine <- function(dim1_len, dim2_len, nPlots){
   # This function generates a serpentine 

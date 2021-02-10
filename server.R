@@ -15,19 +15,32 @@ function(input, output, session){
 
   # Initialize a reactive value for the layout df
   layout_info <- reactiveVal()
-
-  # Load in trials using BrAPI
-  showModal(modalDialog("Importing trials...", footer=NULL))
+  study_dict <- reactiveVal()
+  
+  # Load available years using BrAPI
+  showModal(modalDialog("Importing available years...", footer=NULL))
   token <- get_token(user, passwd, con)
-  study_dict <- get_study_named_list(con, token)
+  season_dict <- get_seasons_named_list(con, token)
   updateSelectInput(session,
-		            "trialName",
-		             choices=names(study_dict))
+		            "trialYear",
+		             choices=names(season_dict))
   removeModal()
+
+  # Load available trials after choosing years
+  observeEvent(input$trialImport,{
+    seasonDbId <- season_dict[input$trialYear]
+    showModal(modalDialog("Importing trials...", footer=NULL))
+    token <- get_token(user, passwd, con)
+    study_dict(get_study_named_list(con, token, seasonDbId)) 
+    updateSelectInput(session,
+                         "trialName",
+                         choices=names(study_dict()))
+    removeModal() 
+  })
   
   # Load a trial spatial layout when button is pushed
   observeEvent(input$layoutImport,{
-    studyDbId <- study_dict[input$trialName]
+    studyDbId <- study_dict()[input$trialName]
     showModal(modalDialog("Importing layout...", footer=NULL))
     token <- get_token(user, passwd, con)
     layout <- get_layout_info(con, studyDbId, token)
