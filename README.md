@@ -1,4 +1,4 @@
-# plantPlan
+# PlantPlan
 
 A Shiny app for updating/creating spatial layouts for trials stored in BreedBase. This app can also be used to output a planting plan and other metadata needed
 for printing barcodes/envelopes.
