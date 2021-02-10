@@ -27,17 +27,21 @@ get_brapi_json <- function(brapi_call, token){
 
 
 get_pageNumber <- function(brapi_call, token){
-  # Get number of pages for call
+  # Probe endpoint for page number
+  brapi_call <- paste0(brapi_call, "&pageSize=10")
   brapi_json <- get_brapi_json(brapi_call, token)
-  pages <- brapi_json[["metadata"]][["pagination"]]$totalPages - 1
+  pages <- brapi_json[["metadata"]][["pagination"]]$totalPages
+  total <- pages * 10
+  pages <- ceiling(total/1000) - 1
   return(pages)
 }
 
 
 get_seasons_named_list <- function(con, token){
   # Retrieve available sesason (years)
-  call <- paste0(con, "/brapi/v2/seasons?pageSize=1000")
+  call <- paste0(con, "/brapi/v2/seasons?")
   pages <- get_pageNumber(call, token)
+  call <- paste0(call, "&pageSize=1000")
   seasonData <- data.frame()
   for(i in 0:pages){
   	contList <- get_brapi_json(paste0(call,"&page=",i), token)
@@ -56,8 +60,9 @@ get_seasons_named_list <- function(con, token){
 
 get_study_named_list <- function(con, token, seasonDbId){
   # Retrieve a df with all studies using brapi
-  call <- paste0(con,"/brapi/v2/studies?pageSize=1000&seasonDbId=",seasonDbId)  # Get page number
+  call <- paste0(con,"/brapi/v2/studies?seasonDbId=",seasonDbId)  # Get page number
   pages <- get_pageNumber(call, token)
+  call <- paste0(call,"&pageSize=1000")
   trialData <- data.frame()
   for(i in 0:pages){  # Collect results from each page
     contList <- get_brapi_json(paste0(call,"&page=",i), token)
@@ -76,30 +81,32 @@ get_study_named_list <- function(con, token, seasonDbId){
 
 get_layout_info <- function(con, studyDbId, token){
   # Retrieves a df with all study layout data
-  call <- paste0(con, "/brapi/v1/studies/", studyDbId,"/layout?pageSize=1000")
+  call <- paste0(con, "/brapi/v2/observationunits?studyDbId=", studyDbId)
   pages <- get_pageNumber(call, token)
+  call <- paste0(call, "&pageSize=1000")
   layout <- data.frame()
   for(i in 0:pages){  # Collect results from each page
     contList <- get_brapi_json(paste0(call,"&page=",i), token)
     observationUnitName <- contList[["result"]][["data"]][["observationUnitName"]]
     accession <- contList[["result"]][["data"]][["germplasmName"]]
-    plotNumber <- contList[["result"]][["data"]][["additionalInfo"]][["plotNumber"]]
-    replicate <- contList[["result"]][["data"]][["replicate"]]
-    blockNumber <- contList[["result"]][["data"]][["blockNumber"]]
-    X <- contList[["result"]][["data"]][["X"]] 
-    Y <- contList[["result"]][["data"]][["Y"]]
+    levelRelationship <- contList[["result"]][["data"]][["observationUnitPosition"]][["observationLevelRelationships"]]
+    plotNumber <- sapply(levelRelationship, function(x) x$levelCode[x$levelName=="plot"])
+    replicate <- sapply(levelRelationship, function(x) x$levelCode[x$levelName=="replicate"])
+    blockNumber <- sapply(levelRelationship,function(x) x$levelCode[x$levelName=="block"])
+    X <- contList[["result"]][["data"]][["observationUnitPosition"]][["positionCoordinateX"]] 
+    Y <- contList[["result"]][["data"]][["observationUnitPosition"]][["positionCoordinateY"]]
+    level <- contList[["result"]][["data"]][["observationUnitPosition"]][["observationLevel"]]["levelName"] 
+    studyName <- contList[["result"]][["data"]][["studyName"]]
+    locationName <- contList[["result"]][["data"]][["locationName"]]
     layout <- rbind(layout, data.frame(observationUnitName=observationUnitName,
                                        accession=accession, plotNumber=plotNumber, 
                                        replicate=replicate, blockNumber=blockNumber,
-                                       X=X, Y=Y,
+                                       X=X, Y=Y,level=level,
+                                       studyName=studyName,
+                                       locationName=locationName,
                                        stringsAsFactors=F))
   }
-  call <- paste0(con, "/brapi/v1/studies/", studyDbId)
-  contList <- get_brapi_json(call, token)
-  studyName <- contList[["result"]][["studyName"]]
-  locationName <-contList[["result"]][["location"]][["abbreviation"]]
-  layout$studyName <- rep(studyName, nrow(layout))
-  layout$locationName <- rep(locationName, nrow(layout))
+  layout <- layout[layout$level=="plot",]
   return(layout)
 }
 
@@ -129,7 +136,7 @@ layoutPlot <- function(layout_info, input){
 is_null_layout <- function(layout_info){
   # returns TRUE if there is no layout and FALSE
   # otherwise
-  if(layout_info$X[1] == ""){ 
+  if(is.na(layout_info$X[1])){ 
   # Check if X coordinate is empty; empty for one = empty for all
     return(TRUE)
   } else {
