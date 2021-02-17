@@ -10,4 +10,3 @@ for printing barcodes/envelopes.
 # TODO
 
 * Implement BRAPI function for updating layouts directly in the database
-* Get BrapiV2 working for layouts
